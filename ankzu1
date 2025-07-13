@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Game</title>
+    <!-- Tải font Unbounded và Poppins từ Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Reset CSS cơ bản */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body - Nền trang tổng thể */
+        body {
+            font-family: 'Poppins', sans-serif; /* Font mặc định cho body */
+            background: #ffffff; /* Màu nền trắng tinh theo yêu cầu */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden; /* Ngăn cuộn ngang */
+        }
+
+        /* Game Container - Khung chứa toàn bộ game */
+        .game-container {
+            max-width: 1290px;
+            width: 100%;
+            background-color: #fff7ed; /* Màu nền chính */
+            /* Thêm họa tiết kẻ ô ly vở */
+            background-image: linear-gradient(to right, #f0f0f0 1px, transparent 1px),
+                              linear-gradient(to bottom, #f0f0f0 1px, transparent 1px);
+            background-size: 20px 20px; /* Kích thước của mỗi ô kẻ */
+            border: 4px solid #ff83aa; /* Viền mới theo yêu cầu */
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); /* Đổ bóng nhẹ nhàng hơn */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Game Title - Tiêu đề trò chơi */
+        .game-title {
+            text-align: center;
+            margin-bottom: 40px; /* Khoảng cách lớn hơn */
+            letter-spacing: 2px; /* Giãn chữ */
+            line-height: 1.2; /* Giảm khoảng cách dòng */
+        }
+        .game-title .wakodo-text {
+            font-family: 'Unbounded', sans-serif; /* Font đặc trưng */
+            font-size: 2.8rem; /* Kích thước lớn hơn */
+            color: #ff508e; /* Màu hồng theo yêu cầu */
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2); /* Đổ bóng nhẹ hơn cho text */
+            display: block; /* Đảm bảo xuống dòng */
+        }
+        .game-title .memory-game-text {
+            font-family: 'Poppins', sans-serif; /* Font Poppins */
+            font-weight: 700; /* Bold */
+            font-size: 1.8rem; /* Kích thước nhỏ hơn */
+            color: #644138; /* Màu nâu theo yêu cầu */
+            display: block; /* Đảm bảo xuống dòng */
+        }
+
+        /* Game Board - Bảng chứa các thẻ bài */
+        .game-board {
+            position: relative;
+            width: 100%;
+            max-width: 850px; /* Tăng kích thước tối đa một chút */
+            margin: 0 auto;
+            aspect-ratio: 4/2; /* Giữ tỷ lệ khung hình */
+            /* Background image mới theo yêu cầu */
+            background-image: url('https://i.ibb.co/CpRHHCtM/Untitled-7.jpg'); /* Cập nhật URL hình ảnh */
+            background-size: contain; /* Đảm bảo hình ảnh nằm trọn vẹn */
+            background-repeat: no-repeat; /* Không lặp lại hình ảnh */
+            background-position: center; /* Căn giữa hình ảnh */
+            background-color: #fff7ed; /* Màu nền để lấp đầy khoảng trống */
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2); /* Đổ bóng rõ hơn */
+        }
+
+        /* Overlay - Lớp phủ mờ */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6); /* Mờ hơn một chút */
+            transition: opacity 0.5s ease; /* Chuyển động mượt hơn */
+            z-index: 1;
+        }
+        .overlay.revealed {
+            opacity: 0;
+        }
+
+        /* Cards Grid - Lưới thẻ bài */
+        .cards-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 15px; /* Khoảng cách giữa các thẻ bài */
+            padding: 15px; /* Padding cho lưới */
+            z-index: 2;
+        }
+
+        /* Card - Thẻ bài */
+        .card {
+            background: linear-gradient(to bottom right, #ff508e, #ff83aa); /* Gradient mặc định khi chưa lật */
+            border-radius: 12px; /* Bo tròn hơn */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Đổ bóng nhẹ */
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-5px) scale(1.02); /* Hiệu ứng hover rõ hơn */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+        /* Khi thẻ được lật, loại bỏ gradient để màu nền hiển thị */
+        .card.flipped {
+            background-image: none !important; 
+        }
+        /* Các lớp màu khi thẻ được lật */
+        .card.flipped.color-khong-chat-bao-quan { background-color: #84cdd3 !important; } /* Không chất bảo quản */
+        .card.flipped.color-khong-huong-lieu { background-color: #f5e2a0 !important; }   /* Không hương liệu */
+        .card.flipped.color-phat-trien-nhai { background-color: #f88ca3 !important; }    /* Phát triển nhai */
+        .card.flipped.color-khong-tao-mau { background-color: #bfbae3 !important; }      /* Không tạo màu */
+
+        .card.matched {
+            animation: fadeOut 0.6s ease-in-out forwards; /* Animation dài hơn một chút */
+        }
+        @keyframes fadeOut {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05); /* Phóng to nhẹ trước khi biến mất */
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0);
+            }
+        }
+
+        /* Card Text - Nội dung chữ trên thẻ bài */
+        .card-text {
+            color: white; /* Màu trắng cho text khi lật */
+            font-family: 'Poppins', sans-serif; /* Font Poppins */
+            font-weight: 700;
+            text-align: center;
+            padding: 10px; /* Giảm padding để chữ gọn hơn */
+            font-size: 1.6rem; /* Kích thước chữ */
+            line-height: 1.3;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            letter-spacing: 1.5px; /* Giãn chữ nhẹ */
+            text-transform: uppercase;
+        }
+        .card.flipped .card-text {
+            opacity: 1;
+        }
+
+        /* Card Back - Icon mặt sau thẻ bài */
+        .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s ease;
+        }
+        .card-back svg {
+            width: 40%; /* Kích thước SVG theo tỷ lệ của thẻ bài */
+            height: 40%;
+            max-width: 60px; /* Giới hạn kích thước tối đa */
+            max-height: 60px;
+            fill: white; /* Màu icon trắng */
+        }
+        .card.flipped .card-back {
+            opacity: 0;
+        }
+
+        /* Victory Message - Box chúc mừng */
+        .victory-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f8f5ee; /* Màu nền mới theo yêu cầu */
+            color: #644138; /* Màu text mới theo yêu cầu */
+            padding: 25px 40px; /* Giảm padding dọc, tăng padding ngang để box ngắn và dài hơn */
+            border-radius: 25px; /* Bo tròn hơn */
+            text-align: center;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); /* Đổ bóng mạnh hơn */
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease-out; /* Chuyển động mượt và nhanh hơn */
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            align-items: center; /* Center children horizontally */
+            gap: 15px; /* Khoảng cách giữa các phần tử */
+            max-width: 700px; /* Tăng chiều rộng tối đa cho box */
+            width: 90%; /* Đảm bảo responsive */
+        }
+        .victory-message.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* Tiêu đề "Chúc mừng!" */
+        .victory-message .victory-title {
+            font-family: 'Unbounded', sans-serif; /* Font đặc trưng */
+            font-size: 1.5rem; /* Kích thước nhỏ hơn theo yêu cầu */
+            color: #ff508e; /* Màu hồng theo yêu cầu */
+            margin-bottom: 15px; /* Khoảng cách dưới tiêu đề */
+            white-space: nowrap; /* Đảm bảo trên một hàng */
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1); /* Đổ bóng nhẹ hơn */
+        }
+        /* Wrapper cho nội dung ngang trong victory message */
+        .victory-content-wrapper {
+            display: flex;
+            flex-direction: row; /* Hiển thị ngang */
+            align-items: center;
+            gap: 25px; /* Khoảng cách giữa ảnh và text */
+            flex-wrap: wrap; /* Cho phép xuống dòng trên màn hình nhỏ */
+            justify-content: center; /* Căn giữa khi xuống dòng */
+            width: 100%; /* Đảm bảo chiếm đủ chiều rộng */
+        }
+        .victory-message img {
+            max-width: 100px; /* Kích thước hình hộp quà */
+            height: auto;
+            flex-shrink: 0; /* Ngăn ảnh bị co lại */
+        }
+        .victory-text-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Căn trái text trong phần nội dung */
+            text-align: left; /* Căn trái text trong phần nội dung */
+        }
+        .victory-message p {
+            font-family: 'Poppins', sans-serif; /* Font Poppins */
+            font-weight: 400; /* Regular */
+            font-size: 1.1rem; /* Kích thước chữ */
+            line-height: 1.5;
+            margin-bottom: 0; /* Bỏ margin bottom để nút nằm sát hơn */
+            color: #644138; /* Đảm bảo màu text */
+        }
+        .confirm-button {
+            background-color: #a6e1e3; /* Màu mới theo yêu cầu */
+            color: white; /* Text màu trắng */
+            font-family: 'Poppins', sans-serif; /* Font Poppins */
+            font-weight: 600; /* SemiBold */
+            font-size: 1.2rem; /* Kích thước chữ */
+            padding: 15px 35px; /* Tăng padding */
+            border: none;
+            border-radius: 9999px; /* Bo tròn tối đa theo yêu cầu */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0px 3px 0px #5bc9cb; /* Shadow mới theo yêu cầu */
+            margin-top: 20px; /* Khoảng cách từ nội dung phía trên */
+            white-space: nowrap; /* Đảm bảo chữ trên một hàng */
+        }
+        .confirm-button:hover {
+            background-color: #8cd0d2; /* Màu đậm hơn khi hover */
+            transform: translateY(-3px); /* Nhấc nhẹ lên */
+            box-shadow: 0px 6px 0px #5bc9cb; /* Shadow tăng khi hover */
+        }
+
+        /* Form Styles */
+        .registration-form-container {
+            max-width: 1000px; /* Giới hạn chiều rộng của form, làm cho nó ngang hơn */
+            width: 100%;
+            background-color: #fff7ed;
+            border: 4px solid #ff83aa;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px; /* Khoảng cách giữa các phần tử trong form */
+        }
+
+        /* Flex container for rows with two fields */
+        .form-row {
+            display: flex;
+            gap: 20px; /* Khoảng cách giữa các cột */
+            width: 100%;
+            margin-bottom: 15px; /* Khoảng cách giữa các hàng */
+        }
+
+        .form-group {
+            width: 100%; /* Mặc định cho full width */
+            text-align: left;
+        }
+
+        .form-group.half-width {
+            flex: 1; /* Chia đều chiều rộng trong form-row */
+        }
+
+        .form-group.full-width {
+            width: 100%; /* Đảm bảo chiếm toàn bộ chiều rộng */
+        }
+
+        .form-group label {
+            display: block;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            color: #644138;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="tel"],
+        .form-group input[type="email"],
+        .form-group textarea,
+        .form-group select { /* Thêm select vào đây */
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ff83aa; /* Viền hồng */
+            border-radius: 10px; /* Bo tròn */
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            color: #644138;
+            background-color: #ffffff; /* Nền trắng cho input */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus { /* Thêm select vào đây */
+            outline: none;
+            border-color: #ff508e; /* Màu hồng đậm khi focus */
+            box-shadow: 0 0 0 3px rgba(255, 80, 142, 0.2); /* Shadow nhẹ khi focus */
+        }
+
+        .form-group textarea {
+            resize: vertical; /* Cho phép resize theo chiều dọc */
+            min-height: 50px; /* Rút ngắn chiều dọc */
+        }
+        
+        /* Custom arrow for select box */
+        .form-group select {
+            appearance: none; /* Remove default select arrow */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23ff508e%22%20d%3D%22M287%20197.6l-14.4-14.4c-2.4-2.4-5.6-3.6-8.8-3.6s-6.4%201.2-8.8%203.6L146.2%20259.2%2047.4%20160.4c-2.4-2.4-5.6-3.6-8.8-3.6s-6.4%201.2-8.8%203.6L15.4%20172c-2.4%202.4-3.6%205.6-3.6%208.8s1.2%206.4%203.6%208.8l128%20128c2.4%202.4%205.6%203.6%208.8%203.6s6.4-1.2%208.8-3.6l128-128c2.4-2.4%203.6-5.6%203.6-8.8s-1.2-6.4-3.6-8.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 12px;
+            padding-right: 35px; /* Make space for the custom arrow */
+        }
+
+
+        .checkbox-group {
+            width: 100%;
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 10px;
+            margin-top: 4px; /* Căn chỉnh với text */
+            min-width: 18px; /* Đảm bảo kích thước đủ lớn để click */
+            min-height: 18px;
+            accent-color: #ff508e; /* Màu hồng cho checkbox */
+        }
+
+        .checkbox-group label {
+            font-family: 'Poppins', sans-serif;
+            color: #644138;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            cursor: pointer;
+        }
+
+        .start-game-button {
+            background-color: #ff508e; /* Màu hồng */
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 1.4rem; /* Kích thước lớn hơn */
+            padding: 18px 45px; /* Padding lớn hơn */
+            border: none;
+            border-radius: 9999px; /* Bo tròn tối đa */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0px 4px 0px #cc4071; /* Shadow màu hồng đậm hơn */
+            white-space: nowrap;
+            opacity: 0.6; /* Mờ khi disable */
+            pointer-events: none; /* Vô hiệu hóa click khi disable */
+        }
+
+        .start-game-button.enabled {
+            opacity: 1; /* Rõ khi enable */
+            pointer-events: auto; /* Kích hoạt click khi enable */
+        }
+
+        .start-game-button:hover.enabled {
+            background-color: #e0407a; /* Màu hồng đậm hơn khi hover */
+            transform: translateY(-3px); /* Nhấc nhẹ lên */
+            box-shadow: 0px 7px 0px #cc4071; /* Shadow tăng khi hover */
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            .game-container, .registration-form-container {
+                padding: 20px;
+                border-radius: 15px;
+            }
+            .game-title .wakodo-text {
+                font-size: 2rem;
+            }
+            .game-title .memory-game-text {
+                font-size: 1.4rem;
+            }
+            .cards-grid {
+                gap: 10px;
+                padding: 10px;
+            }
+            .card-text {
+                font-size: 1.2rem;
+                padding: 8px;
+                letter-spacing: 1px;
+            }
+            .card-back svg {
+                width: 35%; /* Điều chỉnh kích thước icon trên mobile */
+                height: 35%;
+                max-width: 50px;
+                max-height: 50px;
+            }
+            .victory-message {
+                padding: 25px;
+                font-size: 1.1rem;
+                border-radius: 20px;
+                gap: 10px;
+            }
+            .victory-message .victory-title {
+                font-size: 1.3rem; /* Nhỏ hơn trên mobile */
+                margin-bottom: 10px;
+            }
+            .victory-message p {
+                font-size: 0.95rem;
+                line-height: 1.4;
+                margin-bottom: 15px;
+            }
+            .victory-message img {
+                max-width: 80px; /* Nhỏ hơn trên mobile */
+                margin-bottom: 10px;
+            }
+            /* Trên mobile, xếp chồng nội dung victory message */
+            .victory-content-wrapper {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .victory-text-content {
+                align-items: center; /* Căn giữa lại text trên mobile */
+                text-align: center;
+            }
+            .confirm-button, .start-game-button {
+                font-size: 1rem;
+                padding: 12px 25px;
+                border-radius: 8px;
+            }
+
+            /* Form Mobile Adjustments */
+            .registration-form-container {
+                padding: 20px;
+            }
+            .form-row {
+                flex-direction: column; /* Stack vertically on mobile */
+                gap: 0; /* Remove gap between stacked items */
+            }
+            .form-group.half-width {
+                width: 100%; /* Full width on mobile */
+            }
+            .form-group label {
+                font-size: 0.9rem;
+            }
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+            .checkbox-group label {
+                font-size: 0.8rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .game-container, .registration-form-container {
+                padding: 15px;
+            }
+            .game-title .wakodo-text {
+                font-size: 1.6rem;
+            }
+            .game-title .memory-game-text {
+                font-size: 1.1rem;
+            }
+            .cards-grid {
+                gap: 6px;
+                padding: 6px;
+            }
+            .card-text {
+                font-size: 0.9rem;
+                padding: 5px;
+                letter-spacing: 0.8px;
+            }
+            .card-back svg {
+                width: 30%; /* Điều chỉnh kích thước icon trên mobile nhỏ hơn */
+                height: 30%;
+                max-width: 40px;
+                max-height: 40px;
+            }
+            .victory-message {
+                padding: 20px;
+                font-size: 1rem;
+            }
+            .victory-message .victory-title {
+                font-size: 1.1rem; /* Nhỏ hơn nữa trên mobile */
+            }
+            .victory-message p {
+                font-size: 0.85rem;
+            }
+            .victory-message img {
+                max-width: 60px; /* Nhỏ hơn nữa trên mobile */
+            }
+            .confirm-button, .start-game-button {
+                font-size: 0.9rem;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Registration Form Container -->
+    <div class="registration-form-container" id="registrationFormContainer">
+        <h1 class="game-title">
+            <span class="wakodo-text">WAKODO</span>
+            <span class="memory-game-text">ĐĂNG KÝ THÔNG TIN</span>
+        </h1>
+        <form id="registrationForm">
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label for="fullName">Họ và Tên <span style="color: red;">*</span></label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+                <div class="form-group half-width">
+                    <label for="phoneNumber">Số điện thoại <span style="color: red;">*</span></label>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" required pattern="[0-9]{10,11}" title="Số điện thoại phải có 10 hoặc 11 chữ số.">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label for="email">Email <span style="color: red;">*</span></label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group half-width">
+                    <label for="childAge">Độ tuổi con bạn</label>
+                    <select id="childAge" name="childAge">
+                        <option value="">Chọn độ tuổi</option>
+                        <option value="6-months">6 tháng</option>
+                        <option value="7-8-months">7-8 tháng</option>
+                        <option value="9-10-months">9-10 tháng</option>
+                        <option value="12-18-months">12-18 tháng</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label for="shippingAddress">Địa chỉ nhận quà <span style="color: red;">*</span></label>
+                <textarea id="shippingAddress" name="shippingAddress" rows="3" required></textarea>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="privacyConsent" name="privacyConsent" required>
+                <label for="privacyConsent">Chúng tôi cam kết sẽ đảm bảo thông tin của người chơi.</label>
+            </div>
+            <button type="submit" class="start-game-button" id="startGameButton">Bắt đầu trò chơi</button>
+        </form>
+    </div>
+
+    <!-- Game Container (initially hidden) -->
+    <div class="game-container" id="gameContainer" style="display: none;">
+        <h1 class="game-title">
+            <span class="wakodo-text">WAKODO</span>
+            <span class="memory-game-text">MEMORY GAME</span>
+        </h1>
+        <div class="game-board">
+            <div class="overlay" id="overlay"></div>
+            <div class="cards-grid" id="cardsGrid"></div>
+        </div>
+    </div>
+
+    <!-- Victory Message -->
+    <div class="victory-message" id="victoryMessage">
+        <h2 class="victory-title">🎉 Chúc mừng!</h2>
+        <div class="victory-content-wrapper">
+            <img src="https://placehold.co/150x150/ffffff/644138?text=Gift+Box" alt="Hộp quà" class="gift-box-image">
+            <div class="victory-text-content">
+                <p>Chúc mừng bạn đã hoàn thành trò chơi và nhận được phần quà từ WAKODO, chúng tôi sẽ liên lạc với bạn để xác nhận thông tin nhận quà qua Zalo</p>
+            </div>
+        </div>
+        <button class="confirm-button" id="confirmButton">Xác nhận</button>
+    </div>
+
+    <script>
+        const cardTexts = [
+            "Không chất bảo quản",
+            "Không hương liệu", 
+            "Phát triển nhai",
+            "Không tạo màu"
+        ];
+
+        // Define Japanese pastel colors and their corresponding CSS class names
+        const japanesePastelColors = {
+            "Không chất bảo quản": { hex: "#84cdd3", className: "color-khong-chat-bao-quan" },
+            "Không hương liệu": { hex: "#f5e2a0", className: "color-khong-huong-lieu" },
+            "Phát triển nhai": { hex: "#f88ca3", className: "color-phat-trien-nhai" },
+            "Không tạo màu": { hex: "#bfbae3", className: "color-khong-tao-mau" }
+        };
+
+        let gameState = {
+            cards: [],
+            flippedCards: [],
+            matchedPairs: 0,
+            isGameActive: false
+        };
+
+        // Updated SVG for the baby face icon
+        const babyFaceSvg = `
+            <svg viewBox="0 0 122.88 109.15" fill="white">
+                <g>
+                    <path d="M60.11,36.27c-1.18,0.67-2.68,0.26-3.35-0.93c-0.67-1.18-0.26-2.68,0.93-3.35c2.45-1.39,4.67-2.88,6.55-4.52 c1.79-1.56,3.25-3.25,4.27-5.08c0.25-0.45,0.46-0.89,0.65-1.33c1.2-2.8,1.48-5.82,0.76-8.52c-0.7-2.6-2.35-4.91-5.05-6.4 c-0.36-0.2-0.73-0.38-1.1-0.54c-0.99-0.43-1.94-0.65-2.85-0.68c-0.9-0.03-1.79,0.12-2.66,0.45c-2.02,0.75-3.58,2.08-4.56,3.61 c-0.56,0.87-0.92,1.81-1.06,2.73c-0.13,0.87-0.07,1.71,0.2,2.45c0.31,0.84,0.92,1.61,1.87,2.22c0.56,0.36,1.3,0.53,2.24,0.52 c1.16-0.02,2.57-0.33,4.25-0.95c1.28-0.46,2.69,0.2,3.15,1.47c0.46,1.28-0.2,2.69-1.47,3.15c-2.19,0.8-4.13,1.21-5.86,1.24 c-1.94,0.03-3.6-0.4-4.98-1.29c-1.89-1.21-3.14-2.83-3.81-4.65c-0.58-1.57-0.73-3.25-0.47-4.9c0.24-1.6,0.86-3.19,1.8-4.66 c1.52-2.37,3.91-4.41,6.99-5.55c1.48-0.55,2.99-0.81,4.53-0.75c1.54,0.05,3.08,0.4,4.62,1.07c0.55,0.24,1.07,0.49,1.55,0.75 c3.96,2.19,6.41,5.6,7.44,9.45c1.01,3.76,0.64,7.92-0.99,11.72c-0.26,0.61-0.55,1.2-0.86,1.77c-1.32,2.39-3.14,4.51-5.35,6.43 C65.36,33.04,62.87,34.72,60.11,36.27L60.11,36.27z M42.05,79.05c-0.83-0.87-0.79-2.24,0.08-3.07c0.87-0.83,2.24-0.79,3.07,0.08 c5.92,6.22,11.76,8.92,17.51,8.71c5.83-0.21,11.77-3.36,17.78-8.82c0.89-0.81,2.26-0.74,3.07,0.14c0.81,0.89,0.74,2.26-0.14,3.07 c-6.76,6.14-13.61,9.7-20.55,9.94C55.84,89.35,48.9,86.25,42.05,79.05L42.05,79.05z M45.25,48.75c3.56,0,6.45,2.89,6.45,6.45 c0,3.56-2.89,6.45-6.45,6.45c-3.56,0-6.45-2.89-6.45-6.45C38.8,51.64,41.69,48.75,45.25,48.75L45.25,48.75z M80.14,48.75 c3.56,0,6.45,2.89,6.45,6.45c0,3.56-2.89,6.45-6.45,6.45c-3.56,0-6.45-2.89-6.45-6.45C73.69,51.64,76.58,48.75,80.14,48.75 L80.14,48.75z M81.05,29.8c-1.21-0.54-1.76-1.98-1.24-3.22c0.52-1.24,1.92-1.82,3.13-1.28c5.99,2.68,11.28,6.43,15.55,10.97 c3.72,3.95,6.68,8.51,8.69,13.48l0.16-0.04c0.87-0.19,1.76-0.29,2.65-0.29c3.55,0,6.77,1.49,9.11,3.9c2.33,2.41,3.77,5.73,3.77,9.39c0,3.66-1.44,6.98-3.77,9.39c-2.34,2.41-5.56,3.9-9.11,3.9c-0.46,0-0.92-0.03-1.38-0.08 c-2.62,9.29-8.48,17.4-16.42,23.27c-8.39,6.21-19.1,9.93-30.76,9.93c-11.65,0-22.37-3.73-30.76-9.93 c-7.94-5.88-13.8-13.98-16.42-23.27c-0.46,0.05-0.92,0.08-1.38,0.08c-3.55,0-6.77-1.49-9.11-3.9C1.44,69.71,0,66.39,0,62.72 c0-3.66,1.44-6.98,3.77-9.39c2.34-2.41,5.56-3.9,9.11-3.9c0.89,0,1.78,0.1,2.65,0.29l0.16,0.04c2.01-4.98,4.97-9.53,8.69-13.48 c4.28-4.55,9.57-8.3,15.55-10.97c1.21-0.54,2.61,0.04,3.13,1.28c0.52,1.24-0.04,2.69-1.24,3.22c-5.4,2.41-10.17,5.8-14.02,9.9 c-3.76,4-6.65,8.67-8.39,13.79c-0.03,0.11-0.07,0.21-0.11,0.31c-0.53,1.24-1.94,1.81-3.14,1.26c-0.52-0.23-1.05-0.41-1.59-0.53 c-0.52-0.11-1.09-0.17-1.68-0.17c-2.25,0-4.27,0.93-5.73,2.44c-1.47,1.51-2.37,3.61-2.37,5.93c0,2.32,0.91,4.41,2.37,5.93 c1.46,1.51,3.49,2.44,5.73,2.44c0.42,0,0.83-0.03,1.23-0.09c0.43-0.07,0.83-0.16,1.19-0.28l0,0c0.06-0.02,0.12-0.03,0.18-0.05 c1.28-0.3,2.56,0.53,2.85,1.86c1.98,9.07,7.46,17.03,15.14,22.7c7.59,5.62,17.34,8.99,27.98,8.99c10.64,0,20.38-3.37,27.98-8.99 c7.66-5.67,13.14-13.62,15.13-22.67c0.01-0.07,0.03-0.14,0.05-0.21c0.39-1.3,1.72-2.02,2.98-1.63c0.37,0.12,0.76,0.21,1.19,0.28 c0.39,0.06,0.8,0.09,1.23,0.09c2.25,0,4.27-0.93,5.73-2.44c1.47-1.51,2.37-3.61-2.37-5.93c0-2.32-0.91-4.41-2.37-5.93 c-1.46-1.51-3.49-2.44-5.73-2.44c-0.6,0-1.16,0.06-1.68,0.17c-0.54,0.12-1.07,0.3-1.59,0.53l0,0c-0.06,0.03-0.12,0.05-0.18,0.07 c-1.24,0.45-2.6-0.23-3.03-1.51c-1.74-5.17-4.65-9.89-8.44-13.92C91.21,35.6,86.45,32.21,81.05,29.8L81.05,29.8z"/>
+                </g>
+            </svg>
+        `;
+
+        function initGame() {
+            const cardsGrid = document.getElementById('cardsGrid');
+            const overlay = document.getElementById('overlay');
+                        
+            // Tạo mảng cards với mỗi text xuất hiện 2 lần
+            const cardData = [...cardTexts, ...cardTexts];
+                        
+            // Trộn cards
+            gameState.cards = shuffleArray(cardData);
+                        
+            // Tạo HTML cho cards
+            cardsGrid.innerHTML = '';
+            gameState.cards.forEach((text, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.index = index;
+                card.dataset.text = text;
+                // Gán lớp màu tương ứng với text của thẻ
+                card.dataset.colorClass = japanesePastelColors[text].className;
+
+                // Sử dụng SVG icon mới và màu trắng
+                card.innerHTML = `
+                    <div class="card-back">${babyFaceSvg}</div>
+                    <div class="card-text">${text}</div>
+                `;
+                card.addEventListener('click', () => flipCard(index));
+                cardsGrid.appendChild(card);
+            });
+
+            // Reset game state
+            gameState.flippedCards = [];
+            gameState.matchedPairs = 0;
+            gameState.isGameActive = false;
+                        
+            // Reset overlay
+            overlay.classList.remove('revealed');
+                        
+            // Reset UI
+            document.getElementById('victoryMessage').classList.remove('show');
+        }
+
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function flipCard(index) {
+            if (!gameState.isGameActive) {
+                gameState.isGameActive = true;
+            }
+            const card = document.querySelector(`[data-index="${index}"]`);
+                        
+            // Kiểm tra xem card có thể flip không
+            if (card.classList.contains('flipped') || 
+                card.classList.contains('matched') || 
+                gameState.flippedCards.length >= 2) {
+                return;
+            }
+
+            // Flip card: thêm lớp 'flipped' và lớp màu
+            card.classList.add('flipped');
+            card.classList.add(card.dataset.colorClass); // Thêm lớp màu vào thẻ
+            gameState.flippedCards.push(index);
+
+            // Kiểm tra match khi có 2 cards được flip
+            if (gameState.flippedCards.length === 2) {
+                setTimeout(() => {
+                    checkMatch();
+                }, 1000);
+            }
+        }
+
+        function checkMatch() {
+            const [index1, index2] = gameState.flippedCards;
+            const card1 = document.querySelector(`[data-index="${index1}"]`);
+            const card2 = document.querySelector(`[data-index="${index2}"]`);
+                        
+            if (gameState.cards[index1] === gameState.cards[index2]) {
+                // Match found
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                gameState.matchedPairs++;
+                                
+                // Kiểm tra victory
+                if (gameState.matchedPairs === 4) {
+                    setTimeout(() => {
+                        showVictory();
+                    }, 500);
+                }
+            } else {
+                // No match: loại bỏ lớp 'flipped' và lớp màu
+                card1.classList.remove('flipped');
+                card2.classList.remove('flipped');
+                card1.classList.remove(card1.dataset.colorClass); // Loại bỏ lớp màu
+                card2.classList.remove(card2.dataset.colorClass); // Loại bỏ lớp màu
+            }
+                        
+            gameState.flippedCards = [];
+            updateOverlay();
+        }
+
+        function updateOverlay() {
+            const overlay = document.getElementById('overlay');
+            const revealPercent = (gameState.matchedPairs / 4) * 100;
+                        
+            if (revealPercent === 100) {
+                overlay.classList.add('revealed');
+            } else {
+                overlay.style.opacity = 1 - (revealPercent / 100) * 0.7;
+            }
+        }
+
+        function showVictory() {
+            document.getElementById('victoryMessage').classList.add('show');
+            // Không tự động ẩn nữa, chờ người dùng nhấn nút Xác nhận
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        // --- Form Logic ---
+        const registrationFormContainer = document.getElementById('registrationFormContainer');
+        const registrationForm = document.getElementById('registrationForm');
+        const startGameButton = document.getElementById('startGameButton');
+        const gameContainer = document.getElementById('gameContainer');
+        // Select all required inputs, textareas, and the select box
+        const formInputs = registrationForm.querySelectorAll('input[required], textarea[required], select'); 
+        const privacyConsentCheckbox = document.getElementById('privacyConsent');
+
+        function checkFormValidity() {
+            let allRequiredFilled = true;
+            formInputs.forEach(input => {
+                if (input.tagName === 'SELECT') {
+                    // For select, check if a non-empty option is selected
+                    if (input.value === '') { 
+                        allRequiredFilled = false;
+                    }
+                } else if (!input.value.trim()) {
+                    allRequiredFilled = false;
+                }
+            });
+
+            // Validate phone number specifically
+            const phoneNumberInput = document.getElementById('phoneNumber');
+            const phonePattern = /^[0-9]{10,11}$/;
+            if (!phonePattern.test(phoneNumberInput.value.trim())) {
+                allRequiredFilled = false;
+            }
+
+            if (allRequiredFilled && privacyConsentCheckbox.checked) {
+                startGameButton.classList.add('enabled');
+            } else {
+                startGameButton.classList.remove('enabled');
+            }
+        }
+
+        // Add event listeners for input changes to enable/disable button
+        formInputs.forEach(input => {
+            input.addEventListener('input', checkFormValidity);
+            // For select, 'change' event is more appropriate
+            if (input.tagName === 'SELECT') {
+                input.addEventListener('change', checkFormValidity);
+            }
+        });
+        privacyConsentCheckbox.addEventListener('change', checkFormValidity);
+
+        registrationForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Re-check validity on submit for final check
+            checkFormValidity(); 
+            if (!startGameButton.classList.contains('enabled')) {
+                // If button is not enabled, means form is not valid
+                console.log("Form is not valid. Please fill all required fields and accept the privacy policy.");
+                return;
+            }
+
+            // Collect form data
+            const formData = {
+                fullName: document.getElementById('fullName').value,
+                phoneNumber: document.getElementById('phoneNumber').value,
+                email: document.getElementById('email').value,
+                childAge: document.getElementById('childAge').value,
+                shippingAddress: document.getElementById('shippingAddress').value,
+                privacyConsent: privacyConsentCheckbox.checked
+            };
+
+            console.log("Form Data:", formData);
+
+            // Hide form and show game
+            registrationFormContainer.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            initGame(); // Initialize the game after form submission
+        });
+
+        // Xử lý sự kiện click cho nút Xác nhận (trong victory message)
+        document.getElementById('confirmButton').addEventListener('click', function() {
+            document.getElementById('victoryMessage').classList.remove('show');
+            // Có thể thêm logic điều hướng hoặc gửi thông tin tại đây
+            // Ví dụ: window.location.href = 'https://zalo.me/your_zalo_id';
+            console.log("Nút Xác nhận đã được nhấn!");
+            // Optional: Reset game and show form again for new player
+            // gameContainer.style.display = 'none';
+            // registrationFormContainer.style.display = 'flex';
+            // registrationForm.reset(); // Clear form fields
+            // checkFormValidity(); // Reset button state
+        });
+
+        // Initialize form state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkFormValidity(); // Set initial button state
+            // Ensure game is hidden and form is shown initially
+            gameContainer.style.display = 'none';
+            registrationFormContainer.style.display = 'flex';
+        });
+    </script>
+</body>
+</html>
